@@ -464,7 +464,7 @@ struct NotchSettings: View {
         case .watch:
             NotchWatchSettingsControls()
                 .toggleStyle(TrailingSwitchToggleStyle())
-        case .mixer, .system, .tools:
+        case .home, .mixer, .system, .tools:
             EmptyView()
         }
     }
@@ -718,7 +718,7 @@ struct NotchSettings: View {
     /// The one feature a page needs; Captures and System accept any of several.
     private func moduleFeature(_ module: NotchModule) -> AppFeature? {
         switch module {
-        case .controls, .music, .captures, .system: return nil
+        case .home, .controls, .music, .captures, .system: return nil
         case .mixer: return .mixer
         case .clipboard: return .clipboardHistory
         case .files: return .shelf

@@ -655,6 +655,7 @@ struct NotchView: View {
             NotchEmptyView(symbol: "slider.horizontal.3", message: text.empty)
         } else {
             switch service.selected {
+            case .home: NotchHomeView(service: service, size: pageSize)
             case .timer: NotchTimerView(size: pageSize)
             case .camera: NotchCameraView(size: pageSize)
             case .notifications: NotchNotificationsView(size: pageSize)
@@ -927,6 +928,7 @@ struct NotchShape: Shape {
 extension NotchModule: PanelOrderItem {
     func title(_ language: AppLanguage) -> String {
         switch self {
+        case .home: return FeatureStrings.notch(language).home
         case .timer: return FeatureStrings.notchActivities(language).timer
         case .camera: return FeatureStrings.notchActivities(language).camera
         case .notifications: return FeatureStrings.notchNotifications(language).title

@@ -118,7 +118,8 @@ final class NotchService: ObservableObject {
     @Published private(set) var captureControlsCollapsed = false
     @Published private(set) var captureSelectionInProgress = false
     @Published var pinned = false
-    @Published private(set) var selected: NotchModule = .controls
+    /// The island opens on Home until another page is chosen.
+    @Published private(set) var selected: NotchModule = .home
     @Published private(set) var showingAppPanel = false
     @Published private(set) var showingSections = false
     @Published private(set) var sectionQuery = ""
@@ -769,7 +770,13 @@ final class NotchService: ObservableObject {
                                      timerMode: NotchTimerService.shared.session.hasSession
                                         ? NotchTimerService.shared.session.mode : NotchTimerSupport.savedMode(),
                                      agentsHeight: module == .agents && !detail && !panel
-                                        ? agentsContentHeight(width: geometry.contentWidth) : nil)
+                                        ? agentsContentHeight(width: geometry.contentWidth) : nil,
+                                     homeHasNotice: module == .home && homeShowsNotice)
+    }
+
+    /// Home shows the latest mirrored notification when that page is on.
+    var homeShowsNotice: Bool {
+        modules.contains(.notifications) && !NotchNotificationService.shared.items.isEmpty
     }
 
     /// The AI page is as tall as the cards it shows; nil while the logs are
@@ -3483,6 +3490,18 @@ final class NotchService: ObservableObject {
                 self?.reactMascot(.celebrate)
             }
             NotchDownloadService.shared.onFailure = { [weak self] in self?.reactMascot(.confused) }
+        }
+        if modules.contains(.home), modules.contains(.notifications) {
+            // Home's notification row comes and goes with the latest message.
+            NotchNotificationService.shared.objectWillChange
+                .receive(on: DispatchQueue.main)
+                .map { _ in NotchNotificationService.shared.items.isEmpty }
+                .removeDuplicates()
+                .sink { [weak self] _ in
+                    guard let self, self.expanded, self.selected == .home, !self.showingAppPanel,
+                          !self.showingSections else { return }
+                    self.refreshPresentation()
+                }.store(in: &subscriptions)
         }
         if modules.contains(.agents) {
             // Only what changes the island's size or strip: a turn starting or

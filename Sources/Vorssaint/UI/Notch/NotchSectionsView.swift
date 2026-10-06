@@ -105,7 +105,7 @@ struct NotchSectionsView: View {
             VStack(spacing: 6) {
                 Image(systemName: module.symbol)
                     .font(.system(size: 22, weight: .medium))
-                    .foregroundStyle(tint(for: module))
+                    .foregroundStyle(module.galleryTint)
                     .frame(width: 25, height: 25)
                 Text(module.title(l10n.language))
                     .font(.system(size: 11, weight: .medium))
@@ -143,8 +143,12 @@ struct NotchSectionsView: View {
         .help(visible ? module.title(l10n.language) + "  ⌥⌘" + module.shortcutKey.uppercased() : "")
     }
 
-    private func tint(for module: NotchModule) -> Color {
-        switch module {
+}
+
+extension NotchModule {
+    /// A page's mark in the sections gallery and on Home's dock.
+    var galleryTint: Color {
+        switch self {
         case .music: return .pink
         case .calendar: return .red
         case .timer: return .orange
