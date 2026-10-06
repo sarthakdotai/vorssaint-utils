@@ -776,13 +776,7 @@ final class NotchService: ObservableObject {
                                      timerMode: NotchTimerService.shared.session.hasSession
                                         ? NotchTimerService.shared.session.mode : NotchTimerSupport.savedMode(),
                                      agentsHeight: module == .agents && !detail && !panel
-                                        ? agentsContentHeight(width: geometry.contentWidth) : nil,
-                                     homeHasNotice: module == .home && homeShowsNotice)
-    }
-
-    /// Home shows the latest mirrored notification when that page is on.
-    var homeShowsNotice: Bool {
-        modules.contains(.notifications) && !NotchNotificationService.shared.items.isEmpty
+                                        ? agentsContentHeight(width: geometry.contentWidth) : nil)
     }
 
     /// The AI page is as tall as the cards it shows; nil while the logs are
@@ -1267,7 +1261,7 @@ final class NotchService: ObservableObject {
         guard let panel else { return }
         let reopening = reopeningDestination
         let useReopeningSurface = module == nil && !expanded && !appPanel && !sections && metric == nil
-        let destination = module.flatMap { modules.contains($0) ? $0 : nil } ?? reopening.module
+        let destination = module.flatMap { NotchHomeSupport.page($0, in: modules) } ?? reopening.module
         let appPanel = appPanel || (useReopeningSurface && reopening.appPanel)
         let sections = sections || (useReopeningSurface && reopening.sections)
         if useReopeningSurface && reopening.appPanel { MenuPanelFocus.shared.showNormalPanel() }
@@ -1707,8 +1701,8 @@ final class NotchService: ObservableObject {
     }
 
     func select(_ module: NotchModule) {
-        guard modules.contains(module) else { return }
-        open(module)
+        guard let page = NotchHomeSupport.page(module, in: modules) else { return }
+        open(page)
     }
 
     /// The pad lives in the island when its page is on; otherwise the
@@ -3497,18 +3491,6 @@ final class NotchService: ObservableObject {
             }
             NotchDownloadService.shared.onFailure = { [weak self] in self?.reactMascot(.confused) }
         }
-        if modules.contains(.home), modules.contains(.notifications) {
-            // Home's notification row comes and goes with the latest message.
-            NotchNotificationService.shared.objectWillChange
-                .receive(on: DispatchQueue.main)
-                .map { _ in NotchNotificationService.shared.items.isEmpty }
-                .removeDuplicates()
-                .sink { [weak self] _ in
-                    guard let self, self.expanded, self.selected == .home, !self.showingAppPanel,
-                          !self.showingSections else { return }
-                    self.refreshPresentation()
-                }.store(in: &subscriptions)
-        }
         if modules.contains(.agents) {
             // Only what changes the island's size or strip: a turn starting or
             // ending, the first read landing, which agents have cards, and
@@ -3744,8 +3726,9 @@ final class NotchService: ObservableObject {
         var detailNeeds = expanded && !showingSections ? selectedMetric?.monitorNeeds ?? .none : .none
         if needs, AppFeature.monitorDisk.isAvailable { detailNeeds.disk = true }
         if needs, AppFeature.fanControl.isAvailable { detailNeeds.fanSpeed = true }
-        // The header's readout samples only while the island is open.
-        if expanded, UserDefaults.standard.bool(forKey: DefaultsKey.notchSystemReadout) {
+        // Home's header readout samples only while that page is open.
+        if expanded, selected == .home, !showingAppPanel, !showingSections,
+           UserDefaults.standard.bool(forKey: DefaultsKey.notchSystemReadout) {
             detailNeeds = detailNeeds.merging(NotchSystemReadout.monitorNeeds(available: NotchSystemReadout.availableKinds()))
         }
         SystemMonitor.shared.setNotchDetailNeeds(detailNeeds)

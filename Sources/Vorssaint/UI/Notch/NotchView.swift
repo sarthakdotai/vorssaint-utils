@@ -293,6 +293,11 @@ struct NotchView: View {
             .frame(width: service.surfaceSize.width, height: service.surfaceSize.height, alignment: .top)
     }
 
+    /// Home's header carries the system readout; other pages keep their quiet `…`.
+    private var showsReadout: Bool {
+        systemReadout && service.selected == .home && !showsDetail && !service.showingSections && !service.showingAppPanel
+    }
+
     private var showsDetail: Bool { service.showingAppPanel || service.selectedMetric != nil }
 
     private var expanded: some View {
@@ -331,7 +336,7 @@ struct NotchView: View {
         var size = service.contentSize
         guard !showsDetail else { return size }
         switch service.selected {
-        case .controls:
+        case .home, .controls:
             let items = NotchSupport.controls()
             let shortcuts = items.filter { $0 != .music && $0 != .volume && $0 != .brightness }
             size.height = max(size.height, NotchLayout.controls(
@@ -450,7 +455,7 @@ struct NotchView: View {
                 } else if service.expandedGeometry.headerCameraGap > 0 {
                     // Beside the camera the actions stay in view; the readings
                     // take what room is left on their side, fewer when it is narrow.
-                    if systemReadout {
+                    if showsReadout {
                         NotchSystemReadoutView(showsEllipsisWhenEmpty: false)
                             .frame(maxWidth: .infinity, alignment: .trailing)
                             .allowsHitTesting(false)
@@ -609,7 +614,7 @@ struct NotchView: View {
                     }
                     .accessibilityHidden(true)
                     // The room the actions keep shows system readings instead of `…`.
-                    if systemReadout {
+                    if showsReadout {
                         NotchSystemReadoutView()
                     } else {
                         Image(systemName: "ellipsis")
@@ -666,7 +671,7 @@ struct NotchView: View {
             NotchEmptyView(symbol: "slider.horizontal.3", message: text.empty)
         } else {
             switch service.selected {
-            case .home: NotchHomeView(service: service, size: pageSize)
+            case .home: NotchControlsView(service: service, size: pageSize, smartStacks: true)
             case .timer: NotchTimerView(size: pageSize)
             case .camera: NotchCameraView(size: pageSize)
             case .notifications: NotchNotificationsView(size: pageSize)

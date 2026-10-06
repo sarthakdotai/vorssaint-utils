@@ -1448,7 +1448,8 @@ enum Defaults {
         DefaultsKey.notchReturnHome: true,
         DefaultsKey.notchHomeModule: NotchModule.home.rawValue,
         DefaultsKey.notchOpensActivity: false,
-        DefaultsKey.notchHiddenModules: "",
+        // Home replaces Controls, which stays one switch away.
+        DefaultsKey.notchHiddenModules: NotchModule.controls.rawValue,
         DefaultsKey.notchModuleOrder: "",
         DefaultsKey.notchQuickAccessLayout: Data(),
         DefaultsKey.notchVolume: true,

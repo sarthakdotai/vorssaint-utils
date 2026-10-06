@@ -1,57 +1,35 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Vorssaint
 
-import CoreGraphics
-
-/// Home: what is happening now, the latest notification, and every page one
-/// click away. It reads the activities the closed island already tracks, so
-/// both always agree on what is live.
+/// Home is Controls with smart cards: the player and the levels each hold a
+/// second face a swipe away, and the face that matters now comes first.
 enum NotchHomeSupport {
-    /// Narrower than this, a card's reading is cut too short to be useful.
-    static let minimumCardWidth: CGFloat = 132
-    static let maximumCards = 3
-
-    /// How many cards share the row at `width`, never fewer than one.
-    static func cardCapacity(width: CGFloat) -> Int {
-        guard width.isFinite, width > 0 else { return 1 }
-        let fitting = Int((width + NotchLayout.rowSpacing) / (minimumCardWidth + NotchLayout.rowSpacing))
-        return min(maximumCards, max(1, fitting))
+    enum Face: Equatable {
+        case music, agents, levels, calendar
     }
 
-    /// The live activities, in the order the closed island ranks them, one
-    /// card per page they open: Keep Awake opens Controls, so a second
-    /// activity on the same page would only repeat its destination. With no
-    /// countdown running, the week's next event still gets a card after the
-    /// live ones, so Home always says what is coming up.
-    static func cards(_ activities: [NotchCompactActivity], upcomingEvent: Bool = false,
-                      width: CGFloat) -> [NotchCompactActivity] {
-        var pages = Set<NotchModule>()
-        let candidates = activities + (upcomingEvent ? [.calendar] : [])
-        let distinct = candidates.filter { pages.insert($0.module).inserted }
-        return Array(distinct.prefix(cardCapacity(width: width)))
+    /// The player, then the agents. A turn in progress with nothing playing
+    /// puts the agents first.
+    static func leftFaces(agents: Bool, musicPlaying: Bool, agentsWorking: Bool) -> [Face] {
+        guard agents else { return [.music] }
+        return agentsWorking && !musicPlaying ? [.agents, .music] : [.music, .agents]
     }
 
-    struct Dock: Equatable {
-        let pages: [NotchModule]
-        /// Pages past the room left over open in the sections gallery.
-        let more: Bool
+    /// The levels, then the calendar. An event about to start or under way
+    /// puts the calendar first.
+    static func rightFaces(calendar: Bool, eventSoon: Bool) -> [Face] {
+        guard calendar else { return [.levels] }
+        return eventSoon ? [.calendar, .levels] : [.levels, .calendar]
     }
 
-    /// Every enabled page but Home itself, in the person's own order, as many
-    /// as fit at `width`. When some do not, the last place opens the sections
-    /// gallery instead, so no page is ever out of sight without a way to it.
-    static func dock(_ modules: [NotchModule], width: CGFloat) -> Dock {
-        let pages = modules.filter { $0 != .home }
-        let pitch = NotchLayout.homeDockTileWidth + NotchLayout.sectionSpacing
-        let capacity = width.isFinite ? max(1, Int((width + NotchLayout.sectionSpacing) / pitch)) : 1
-        guard pages.count > capacity else { return Dock(pages: pages, more: false) }
-        return Dock(pages: Array(pages.prefix(capacity - 1)), more: true)
-    }
-
-    /// The page's height: cards, an optional notification row, then the dock.
-    static func height(hasNotice: Bool) -> CGFloat {
-        NotchLayout.homeCardHeight + NotchLayout.rowSpacing
-            + (hasNotice ? NotchLayout.homeNoticeHeight + NotchLayout.rowSpacing : 0)
-            + NotchLayout.homeDockHeight
+    /// Home and Controls stand in for each other: a link to the one hidden
+    /// opens the other rather than nothing.
+    static func page(_ module: NotchModule, in modules: [NotchModule]) -> NotchModule? {
+        if modules.contains(module) { return module }
+        switch module {
+        case .home where modules.contains(.controls): return .controls
+        case .controls where modules.contains(.home): return .home
+        default: return nil
+        }
     }
 }

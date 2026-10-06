@@ -423,16 +423,21 @@ enum NotchMusicVisibilityTests {
         bar.syncVisibleConsumers()
         suite.expect(!reader.running, "the bar covering a page keeps that page's readers stopped")
 
-        // The header's system readout samples only while the island is open.
+        // Home's header readout samples only while that page is open.
         let monitor = SystemMonitor.shared
         let header = Service()
-        header.modules = [.controls]
+        header.modules = [.home, .controls]
+        header.selected = .home
         defaults.set(true, forKey: DefaultsKey.notchSystemReadout)
         header.syncVisibleConsumers()
         suite.expect(!monitor.detailNeeds.readout, "the closed island never samples for the header's readout")
         header.expanded = true
+        header.selected = .controls
         header.syncVisibleConsumers()
-        suite.expect(monitor.detailNeeds.readout, "opening the island samples the readings its header shows")
+        suite.expect(!monitor.detailNeeds.readout, "another page's header shows no readout, so nothing samples for it")
+        header.selected = .home
+        header.syncVisibleConsumers()
+        suite.expect(monitor.detailNeeds.readout, "opening Home samples the readings its header shows")
         defaults.set(false, forKey: DefaultsKey.notchSystemReadout)
         header.syncVisibleConsumers()
         suite.expect(!monitor.detailNeeds.readout, "turning the readout off stops its sampling while open")

@@ -13,6 +13,9 @@ enum NotchLevelStyle {
 struct NotchControlsView: View {
     @ObservedObject var service: NotchService
     let size: CGSize
+    /// Home draws this page with smart cards: the player and the levels
+    /// each keep a second face, the agents and the calendar, a swipe away.
+    var smartStacks = false
     @ObservedObject private var l10n = L10n.shared
     @AppStorage(DefaultsKey.brightnessControlEnabled) private var brightnessEnabled = false
 
@@ -59,16 +62,22 @@ struct NotchControlsView: View {
     private func cardRow(levels: [NotchControlItem], music: Bool, height: CGFloat) -> some View {
         HStack(spacing: NotchLayout.rowSpacing) {
             if music {
-                NotchMusicControlsView(notch: service, height: height)
-                if levels.count > 1 {
-                    VStack(spacing: 6) {
-                        ForEach(levels) { level($0, style: .row, showsDevice: false) }
+                NotchSmartStack(faces: leftFaces, height: height) { face in
+                    if face == .agents {
+                        NotchHomeAgentsFace(service: service)
+                    } else {
+                        NotchMusicControlsView(notch: service, height: height)
                     }
-                    .padding(.horizontal, 12)
-                    .frame(width: 160, height: height)
-                    .modifier(NotchControlSurface(cornerRadius: 18))
-                } else if let single = levels.first {
-                    level(single, style: .card, showsDevice: height >= 88).frame(width: 160, height: height)
+                }
+                if !levels.isEmpty {
+                    NotchSmartStack(faces: rightFaces, height: height) { face in
+                        if face == .calendar {
+                            NotchHomeCalendarFace(service: service)
+                        } else {
+                            levelCard(levels, height: height)
+                        }
+                    }
+                    .frame(width: 160)
                 }
             } else {
                 ForEach(levels) { item in
@@ -77,6 +86,35 @@ struct NotchControlsView: View {
             }
         }
         .frame(height: height)
+    }
+
+    /// Two levels fold into one slim card; a single one keeps its full card.
+    @ViewBuilder private func levelCard(_ levels: [NotchControlItem], height: CGFloat) -> some View {
+        if levels.count > 1 {
+            VStack(spacing: 6) {
+                ForEach(levels) { level($0, style: .row, showsDevice: false) }
+            }
+            .padding(.horizontal, 12)
+            .frame(width: 160, height: height)
+            .modifier(NotchControlSurface(cornerRadius: 18))
+        } else if let single = levels.first {
+            level(single, style: .card, showsDevice: height >= 88).frame(width: 160, height: height)
+        }
+    }
+
+    /// Controls keeps one face per card; Home adds the agents and the
+    /// calendar, putting first whichever matters now.
+    private var leftFaces: [NotchHomeSupport.Face] {
+        guard smartStacks else { return [.music] }
+        return NotchHomeSupport.leftFaces(agents: service.modules.contains(.agents),
+                                          musicPlaying: NotchMusicService.shared.playback?.isPlaying == true,
+                                          agentsWorking: !AgentUsageService.shared.snapshot.live.isEmpty)
+    }
+
+    private var rightFaces: [NotchHomeSupport.Face] {
+        guard smartStacks else { return [.levels] }
+        return NotchHomeSupport.rightFaces(calendar: service.modules.contains(.calendar),
+                                           eventSoon: NotchCalendarService.shared.countdown != nil)
     }
 
     @ViewBuilder private func level(_ item: NotchControlItem, style: NotchLevelStyle, showsDevice: Bool) -> some View {

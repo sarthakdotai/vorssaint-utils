@@ -165,7 +165,7 @@ struct NotchPagePreview: View {
 
     var body: some View {
         switch module {
-        case .home: NotchHomeView(service: notch, size: size)
+        case .home: NotchControlsView(service: notch, size: size, smartStacks: true)
         case .timer: NotchTimerView(size: size)
         case .camera: camera
         case .notifications: NotchNotificationsView(size: size)

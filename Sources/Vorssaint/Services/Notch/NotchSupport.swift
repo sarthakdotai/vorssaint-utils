@@ -242,11 +242,6 @@ enum NotchLayout {
     static let clipboardSearchHeight: CGFloat = 36
     static let clipboardCardHeight: CGFloat = 104
     static let emptyHeight: CGFloat = 140
-    /// Home's rows fit a compact island without scrolling.
-    static let homeCardHeight: CGFloat = 64
-    static let homeNoticeHeight: CGFloat = 34
-    static let homeDockHeight: CGFloat = 56
-    static let homeDockTileWidth: CGFloat = 64
     static let musicControlsRowHeight: CGFloat = 32
     static let musicIdleHeight: CGFloat = 84
     static let timerTopRowHeight: CGFloat = 36
@@ -2099,7 +2094,7 @@ struct NotchGeometry: Equatable {
                       fileMediaHeight: CGFloat? = nil, systemCards: Int = 6, toolCount: Int? = 8,
                       capturePreviewHeight: CGFloat? = nil,
                       timerHasSession: Bool = false, timerMode: NotchTimerMode = .timer,
-                      agentsHeight: CGFloat? = nil, homeHasNotice: Bool = false) -> CGSize {
+                      agentsHeight: CGFloat? = nil) -> CGSize {
         let budget = contentBudget
         let showsCapturePreview = module == .captures && !detail && capturePreviewHeight != nil
         let showsFileMedia = module == .files && !detail && fileMediaHeight != nil
@@ -2116,9 +2111,7 @@ struct NotchGeometry: Equatable {
             contentHeight = max(0, capturePreviewHeight ?? 0) + 4
         } else {
             switch module {
-            case .home:
-                contentHeight = min(budget, NotchHomeSupport.height(hasNotice: homeHasNotice))
-            case .controls:
+            case .home, .controls:
                 let sliders = min(2, max(0, sliderCount))
                 let home = NotchLayout.controls(hasCards: controlsHaveMusic || sliders > 0, shortcutCount: max(0, shortcutCount),
                                                 width: contentWidth, height: budget)

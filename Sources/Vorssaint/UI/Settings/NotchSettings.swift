@@ -362,7 +362,8 @@ struct NotchSettings: View {
 
     @ViewBuilder private func moduleOptions(_ module: NotchModule) -> some View {
         switch module {
-        case .controls:
+        // Home draws the Controls page, so both share its choices.
+        case .home, .controls:
             let primary = [NotchControlItem.music, .volume, .brightness]
             HStack(spacing: 10) {
                 ForEach(primary) { item in
@@ -464,7 +465,7 @@ struct NotchSettings: View {
         case .watch:
             NotchWatchSettingsControls()
                 .toggleStyle(TrailingSwitchToggleStyle())
-        case .home, .mixer, .system, .tools:
+        case .mixer, .system, .tools:
             EmptyView()
         }
     }
