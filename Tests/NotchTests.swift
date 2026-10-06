@@ -1006,9 +1006,9 @@ enum NotchTests {
                      "a first island setup starts spacious, opens by click and uses a separate app panel")
         suite.expect(firstDefaults[DefaultsKey.notchGesturesEnabled] as? Bool == true
                      && firstDefaults[DefaultsKey.notchHapticFeedback] as? Bool == true
-                     && firstDefaults[DefaultsKey.notchReturnHome] as? Bool == false
+                     && firstDefaults[DefaultsKey.notchReturnHome] as? Bool == true
                      && firstDefaults[DefaultsKey.notchCoversMenus] as? Bool == true,
-                     "gestures, haptics, last page and coverage over menus start selected")
+                     "gestures, haptics, returning home and coverage over menus start selected")
         let enabledByDefault = [DefaultsKey.notchNotificationsEnabled, DefaultsKey.notchCameraEnabled,
                                 DefaultsKey.notchAgentsEnabled, DefaultsKey.notchDownloadsEnabled,
                                 DefaultsKey.notchLyricsEnabled, DefaultsKey.notchQueueEnabled,

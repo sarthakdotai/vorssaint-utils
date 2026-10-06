@@ -41,9 +41,9 @@ struct NotchSettings: View {
     @AppStorage(DefaultsKey.notchHideUntilHover) private var hideUntilHover = false
     @AppStorage(DefaultsKey.notchCoversMenus) private var coversMenus = true
     @AppStorage(DefaultsKey.notchHoverDelay) private var hoverDelay = NotchSupport.defaultHoverDelay
-    @AppStorage(DefaultsKey.notchReturnHome) private var returnHome = false
-    @AppStorage(DefaultsKey.notchHomeModule) private var homeModule = NotchModule.controls.rawValue
-    @AppStorage(DefaultsKey.notchOpensActivity) private var opensActivity = true
+    @AppStorage(DefaultsKey.notchReturnHome) private var returnHome = true
+    @AppStorage(DefaultsKey.notchHomeModule) private var homeModule = NotchModule.home.rawValue
+    @AppStorage(DefaultsKey.notchOpensActivity) private var opensActivity = false
     @AppStorage(DefaultsKey.notchHiddenModules) private var hidden = ""
     @AppStorage(DefaultsKey.notchModuleOrder) private var order = ""
     @AppStorage(DefaultsKey.notchVolume) private var volume = true

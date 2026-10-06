@@ -10,7 +10,13 @@ struct NotchHomeView: View {
     let size: CGSize
     @ObservedObject private var l10n = L10n.shared
     @ObservedObject private var notifications = NotchNotificationService.shared
+    @ObservedObject private var calendar = NotchCalendarService.shared
     private var text: NotchStrings { FeatureStrings.notch(l10n.language) }
+
+    /// The week's next event, as the Controls tile names it.
+    private var hasUpcomingEvent: Bool {
+        service.modules.contains(.calendar) && NotchCalendarSupport.tileEvent(calendar.events, now: Date()) != nil
+    }
 
     var body: some View {
         VStack(spacing: NotchLayout.rowSpacing) {
@@ -21,7 +27,7 @@ struct NotchHomeView: View {
                     .frame(height: NotchLayout.homeNoticeHeight)
                     .transition(.opacity)
             }
-            NotchHomeDock(service: service)
+            NotchHomeDock(service: service, width: size.width)
                 .frame(height: NotchLayout.homeDockHeight)
         }
         .frame(width: size.width, alignment: .top)
@@ -29,7 +35,7 @@ struct NotchHomeView: View {
     }
 
     @ViewBuilder private var cards: some View {
-        let live = NotchHomeSupport.cards(service.compactActivities, width: size.width)
+        let live = NotchHomeSupport.cards(service.compactActivities, upcomingEvent: hasUpcomingEvent, width: size.width)
         if live.isEmpty {
             HStack(spacing: 10) {
                 Image(systemName: "moon.stars")
@@ -163,6 +169,14 @@ private struct NotchHomeReading: View {
                     Text(NotchCalendarSupport.timeText(countdown, locale: l10n.language.formattingLocale()))
                         .foregroundStyle(.secondary)
                 }
+            } else if let event = NotchCalendarSupport.tileEvent(calendar.events, now: Date()) {
+                // Before its countdown, the next event reads as the Controls tile does.
+                HStack(spacing: 6) {
+                    Text(event.title.isEmpty ? FeatureStrings.notchCalendar(l10n.language).untitled : event.title)
+                    Text(NotchCalendarSupport.tileStartText(event.start, now: Date(),
+                                                            locale: l10n.language.formattingLocale()))
+                        .foregroundStyle(.secondary)
+                }
             } else {
                 Text(FeatureStrings.notchCalendar(l10n.language).title)
             }
@@ -232,32 +246,38 @@ private struct NotchHomeNotice: View {
     }
 }
 
-/// Every enabled page as a labelled tile, as the sections gallery draws them,
-/// on one row that scrolls sideways when the pages outnumber the room.
+/// Enabled pages as labelled tiles, as the sections gallery draws them,
+/// sharing the row evenly. Pages past the room are one tile away: the last
+/// place opens the gallery, which lists them all.
 private struct NotchHomeDock: View {
     @ObservedObject var service: NotchService
+    let width: CGFloat
     @ObservedObject private var l10n = L10n.shared
     @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: NotchLayout.sectionSpacing) {
-                ForEach(NotchHomeSupport.dock(service.modules)) { module in
-                    tile(module)
-                }
+        let dock = NotchHomeSupport.dock(service.modules, width: width)
+        HStack(spacing: NotchLayout.sectionSpacing) {
+            ForEach(dock.pages) { module in
+                tile(symbol: module.symbol, tint: module.galleryTint, title: module.title(l10n.language),
+                     shortcut: "⌥⌘" + module.shortcutKey.uppercased(), id: module.rawValue) { service.select(module) }
+            }
+            if dock.more {
+                tile(symbol: "square.grid.2x2", tint: .white.opacity(0.85),
+                     title: FeatureStrings.notch(l10n.language).sectionsTitle,
+                     shortcut: "⌘K", id: "more", action: service.toggleSections)
             }
         }
-        .scrollIndicators(.never)
     }
 
-    private func tile(_ module: NotchModule) -> some View {
+    private func tile(symbol: String, tint: Color, title: String, shortcut: String, id: String,
+                      action: @escaping () -> Void) -> some View {
         let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
-        let title = module.title(l10n.language)
-        return Button { service.select(module) } label: {
+        return Button(action: action) {
             VStack(spacing: 5) {
-                Image(systemName: module.symbol)
+                Image(systemName: symbol)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(module.galleryTint)
+                    .foregroundStyle(tint)
                     .frame(height: 19)
                 Text(title)
                     .font(.system(size: 10, weight: .medium))
@@ -265,17 +285,17 @@ private struct NotchHomeDock: View {
                     .minimumScaleFactor(0.8)
             }
             .padding(.horizontal, 4)
-            .frame(width: NotchLayout.homeDockTileWidth, height: NotchLayout.homeDockHeight)
+            .frame(maxWidth: .infinity)
+            .frame(height: NotchLayout.homeDockHeight)
             .background(.white.opacity(0.045), in: shape)
             .overlay { shape.strokeBorder(.white.opacity(contrast == .increased ? 0.4 : 0.04), lineWidth: 1) }
             .contentShape(shape)
         }
         .buttonStyle(NotchButtonStyle(cornerRadius: 14, lifts: false))
         .accessibilityLabel(title)
-        .accessibilityIdentifier("notch.home.dock.\(module.rawValue)")
-        .help(title + "  ⌥⌘" + module.shortcutKey.uppercased())
+        .accessibilityIdentifier("notch.home.dock.\(id)")
+        .help(title + "  " + shortcut)
     }
-
 }
 
 private extension String {

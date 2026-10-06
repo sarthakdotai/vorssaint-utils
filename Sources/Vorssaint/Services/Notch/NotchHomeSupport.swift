@@ -20,16 +20,32 @@ enum NotchHomeSupport {
 
     /// The live activities, in the order the closed island ranks them, one
     /// card per page they open: Keep Awake opens Controls, so a second
-    /// activity on the same page would only repeat its destination.
-    static func cards(_ activities: [NotchCompactActivity], width: CGFloat) -> [NotchCompactActivity] {
+    /// activity on the same page would only repeat its destination. With no
+    /// countdown running, the week's next event still gets a card after the
+    /// live ones, so Home always says what is coming up.
+    static func cards(_ activities: [NotchCompactActivity], upcomingEvent: Bool = false,
+                      width: CGFloat) -> [NotchCompactActivity] {
         var pages = Set<NotchModule>()
-        let distinct = activities.filter { pages.insert($0.module).inserted }
+        let candidates = activities + (upcomingEvent ? [.calendar] : [])
+        let distinct = candidates.filter { pages.insert($0.module).inserted }
         return Array(distinct.prefix(cardCapacity(width: width)))
     }
 
-    /// Every enabled page but Home itself, in the person's own order.
-    static func dock(_ modules: [NotchModule]) -> [NotchModule] {
-        modules.filter { $0 != .home }
+    struct Dock: Equatable {
+        let pages: [NotchModule]
+        /// Pages past the room left over open in the sections gallery.
+        let more: Bool
+    }
+
+    /// Every enabled page but Home itself, in the person's own order, as many
+    /// as fit at `width`. When some do not, the last place opens the sections
+    /// gallery instead, so no page is ever out of sight without a way to it.
+    static func dock(_ modules: [NotchModule], width: CGFloat) -> Dock {
+        let pages = modules.filter { $0 != .home }
+        let pitch = NotchLayout.homeDockTileWidth + NotchLayout.sectionSpacing
+        let capacity = width.isFinite ? max(1, Int((width + NotchLayout.sectionSpacing) / pitch)) : 1
+        guard pages.count > capacity else { return Dock(pages: pages, more: false) }
+        return Dock(pages: Array(pages.prefix(capacity - 1)), more: true)
     }
 
     /// The page's height: cards, an optional notification row, then the dock.

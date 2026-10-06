@@ -413,10 +413,20 @@ struct NotchView: View {
                     if !quickActions.contains(.explore) {
                         NotchIconButton(symbol: "square.grid.2x2", title: text.sectionsTitle, action: service.toggleSections)
                     }
-                    Text(service.selected.title(l10n.language))
+                    // A page's title leads back to Home, the hub every page is listed on.
+                    let title = Text(service.selected.title(l10n.language))
                         .font(Font(NotchLayout.headerTitleFont as CTFont))
                         .lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if service.selected != .home, service.modules.contains(.home) {
+                        Button { service.select(.home) } label: { title }
+                            .buttonStyle(.plain)
+                            .help(NotchModule.home.title(l10n.language) + "  ⌥⌘" + NotchModule.home.shortcutKey.uppercased())
+                            .accessibilityHint(NotchModule.home.title(l10n.language))
+                            .accessibilityIdentifier("notch.title.home")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        title.frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
             }
             .frame(width: service.expandedGeometry.headerCameraGap > 0 ? (service.contentSize.width - service.expandedGeometry.headerCameraGap) / 2 : nil)

@@ -26,10 +26,29 @@ enum NotchHomeTests {
         suite.expect(home.cards([.keepAwake, .timer], width: wide).map(\.module) == [.controls, .timer],
                      "Keep Awake opens Controls, which has no live card of its own")
 
-        suite.expect(home.dock([.home, .controls, .music]) == [.controls, .music],
+        suite.expect(home.cards([.agents, .music], upcomingEvent: true, width: wide) == [.agents, .music, .calendar],
+                     "the week's next event gets a card after the live activities")
+        suite.expect(home.cards([.calendar, .music], upcomingEvent: true, width: wide) == [.calendar, .music],
+                     "a running countdown already is the calendar's card, never a second one")
+        suite.expect(home.cards([.agents, .music, .timer], upcomingEvent: true, width: wide) == [.agents, .music, .timer],
+                     "an upcoming event gives way to activities that are live now")
+        suite.expect(home.cards([], upcomingEvent: true, width: wide) == [.calendar],
+                     "with nothing live, the next event alone fills the row instead of the quiet card")
+
+        let pitch = NotchLayout.homeDockTileWidth + NotchLayout.sectionSpacing
+        let fitsThree = pitch * 3 - NotchLayout.sectionSpacing
+        suite.expect(home.dock([.home, .controls, .music], width: 1000) == .init(pages: [.controls, .music], more: false),
                      "the dock lists every page but Home itself")
-        suite.expect(home.dock([.music, .home, .controls]) == [.music, .controls],
+        suite.expect(home.dock([.music, .home, .controls], width: 1000).pages == [.music, .controls],
                      "the dock keeps the person's page order")
+        suite.expect(home.dock([.controls, .music, .timer], width: fitsThree) == .init(pages: [.controls, .music, .timer], more: false),
+                     "pages that exactly fit need no gallery tile")
+        let crowded = home.dock([.home, .controls, .music, .timer, .calendar], width: fitsThree)
+        suite.expect(crowded == .init(pages: [.controls, .music], more: true),
+                     "when pages overflow, the last place opens the gallery so no page is out of reach")
+        suite.expect(home.dock(NotchModule.allCases, width: 0) == .init(pages: [], more: true)
+                     && home.dock([.music], width: .nan) == .init(pages: [.music], more: false),
+                     "a degenerate width still leaves one place, for the gallery or the only page")
 
         let withNotice = home.height(hasNotice: true)
         let without = home.height(hasNotice: false)
