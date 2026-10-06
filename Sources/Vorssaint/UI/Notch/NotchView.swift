@@ -196,7 +196,8 @@ struct NotchView: View {
                                             NotchActivityCombination(primary: activity, companion: $0)
                                         },
                                         columns: layout.columns, language: l10n.language,
-                                        select: service.selectCompactActivity, combine: service.selectCompactCombination)
+                                        select: service.selectCompactActivity, combine: service.selectCompactCombination,
+                                        openHome: service.pickerOffersHome ? { service.select(.home) } : nil)
                         .padding(.horizontal, NotchActivityPickerLayout.horizontalInset)
                         .padding(.vertical, NotchActivityPickerLayout.verticalInset)
                 }
@@ -980,6 +981,8 @@ struct NotchActivityPicker: View {
     let language: AppLanguage
     let select: (NotchCompactActivity) -> Void
     let combine: (NotchActivityCombination) -> Void
+    /// Opens the island on Home; the choices only change the closed strip.
+    var openHome: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: NotchActivityPickerLayout.spacing) {
@@ -1036,6 +1039,25 @@ struct NotchActivityPicker: View {
                 .accessibilityLabel(activity.title(language))
                 .accessibilityAddTraits(chosen ? .isSelected : [])
                 .accessibilityIdentifier("notch.activity.\(activity.rawValue)")
+            }
+            if let openHome {
+                let title = NotchModule.home.title(language)
+                Button(action: openHome) {
+                    HStack(spacing: 6) {
+                        Image(systemName: NotchModule.home.symbol)
+                        Text(title).lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                    .font(.system(size: 12, weight: .medium))
+                    .padding(.horizontal, 10)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: NotchActivityPickerLayout.rowHeight)
+                    .foregroundStyle(.white)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.12)))
+                    .contentShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(title)
+                .accessibilityIdentifier("notch.activity.home")
             }
         }
     }

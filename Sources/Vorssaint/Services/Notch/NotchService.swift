@@ -458,8 +458,11 @@ final class NotchService: ObservableObject {
     var compactActivityPickerLayout: NotchActivityPickerLayout {
         let activities = compactActivities
         let font = NSFont.systemFont(ofSize: 12, weight: .medium)
-        let labelWidth = activities.map {
-            ($0.title(L10n.shared.language) as NSString).size(withAttributes: [.font: font]).width
+        let language = L10n.shared.language
+        // Home closes the row of choices, sized like any of them.
+        let titles = activities.map { $0.title(language) } + (pickerOffersHome ? [NotchModule.home.title(language)] : [])
+        let labelWidth = titles.map {
+            ($0 as NSString).size(withAttributes: [.font: font]).width
         }.max() ?? 0
         let combinations = compactActivityCombinations
         let sizes = activities.map { compactStripSize(for: $0) }
@@ -467,10 +470,13 @@ final class NotchService: ObservableObject {
         // Switching the chosen strip must not move the buttons under the pointer.
         let strip = CGSize(width: sizes.map(\.width).max() ?? geometry.cameraWidth,
                            height: sizes.map(\.height).max() ?? geometry.stripHeight)
-        return NotchActivityPickerLayout(count: activities.count, labelWidth: labelWidth,
+        return NotchActivityPickerLayout(count: titles.count, labelWidth: labelWidth,
                                          stripSize: strip, screenWidth: geometry.screen.width,
                                          hasCombinations: !combinations.isEmpty)
     }
+
+    /// The picker also opens Home, the page every activity is listed on.
+    var pickerOffersHome: Bool { modules.contains(.home) }
 
     func selectCompactActivity(_ activity: NotchCompactActivity) {
         guard compactActivities.contains(activity) else { return }
