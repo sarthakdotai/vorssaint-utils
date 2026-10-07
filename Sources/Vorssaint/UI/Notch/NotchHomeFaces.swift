@@ -82,3 +82,78 @@ struct NotchHomeCalendarFace: View {
         .accessibilityHint(FeatureStrings.notch(l10n.language).open)
     }
 }
+
+/// The files' face of Home's levels card, there only while the shelf holds
+/// something: the latest items as the shelf draws them. A click opens Files.
+struct NotchHomeFilesFace: View {
+    @ObservedObject var service: NotchService
+    @ObservedObject private var shelf = ShelfService.shared
+    @ObservedObject private var l10n = L10n.shared
+
+    var body: some View {
+        let title = FeatureStrings.notch(l10n.language).files
+        let items = shelf.visibleItems
+        Button { service.select(.files) } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 4) {
+                    Label(title, systemImage: NotchModule.files.symbol)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    Spacer(minLength: 4)
+                    Text("\(items.count)")
+                        .font(.system(size: 10, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+                HStack(spacing: 6) {
+                    ForEach(items.prefix(3)) { item in
+                        Image(nsImage: item.icon)
+                            .resizable()
+                            .aspectRatio(contentMode: item.hasContentThumbnail ? .fill : .fit)
+                            .frame(width: 30, height: 30)
+                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                            .help(item.title)
+                    }
+                }
+                if let latest = items.first {
+                    Text(latest.title)
+                        .font(.system(size: 11, weight: .semibold))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .modifier(NotchControlSurface(cornerRadius: 18, interactive: false))
+            .contentShape(RoundedRectangle(cornerRadius: 18))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityValue("\(items.count)")
+        .accessibilityHint(FeatureStrings.notch(l10n.language).open)
+    }
+}
+
+/// Home's tile for the last tool opened from the Tools page, drawn as that
+/// page draws it. A click runs it from Tools, so a tool that needs the screen
+/// closes the island and one that lives in the page opens there.
+struct NotchHomeToolTile: View {
+    let item: QuickLauncherItem
+    @ObservedObject var service: NotchService
+    @ObservedObject private var l10n = L10n.shared
+    @ObservedObject private var keepAwake = KeepAwakeManager.shared
+    @ObservedObject private var micMute = MicMuteService.shared
+    @ObservedObject private var recorder = ScreenRecorderService.shared
+
+    var body: some View {
+        NotchActionTile(symbol: item.symbol(keepAwake: keepAwake.isActive, muted: micMute.isMuted,
+                                            recording: recorder.isRecording),
+                        title: item.title(l10n, muted: micMute.isMuted, recording: recorder.isRecording)) {
+            service.select(.tools)
+            QuickLauncherService.shared.run(item)
+        }
+        .accessibilityIdentifier("notch.home.tool.\(item.rawValue)")
+    }
+}

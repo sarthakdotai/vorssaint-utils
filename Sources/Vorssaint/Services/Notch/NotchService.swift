@@ -462,7 +462,7 @@ final class NotchService: ObservableObject {
         let activities = compactActivities
         let font = NSFont.systemFont(ofSize: 12, weight: .medium)
         let language = L10n.shared.language
-        // Home closes the row of choices, sized like any of them.
+        // Home leads the row of choices, sized like any of them.
         let titles = activities.map { $0.title(language) } + (pickerOffersHome ? [NotchModule.home.title(language)] : [])
         let labelWidth = titles.map {
             ($0 as NSString).size(withAttributes: [.font: font]).width
@@ -478,7 +478,11 @@ final class NotchService: ObservableObject {
                                          hasCombinations: !combinations.isEmpty)
     }
 
-    /// The picker also opens Home, the page every activity is listed on.
+    /// Home's row of shortcuts: Controls' own, with the timer's place given
+    /// to the last tool opened from Tools.
+    var homeRail: [NotchHomeSupport.Slot] { NotchHomeSupport.rail(modules: modules) }
+
+    /// The picker also opens Home, listed ahead of the activities.
     var pickerOffersHome: Bool { modules.contains(.home) }
 
     func selectCompactActivity(_ activity: NotchCompactActivity) {
@@ -765,7 +769,8 @@ final class NotchService: ObservableObject {
                           capturePreviewHeight: CGFloat?) -> CGSize {
         let controls = NotchSupport.controls()
         let sliders = controls.filter(\.isLevel).count
-        let shortcuts = controls.filter { !$0.isLevel && $0 != .music }.count
+        let shortcuts = module == .home ? homeRail.count
+            : controls.filter { !$0.isLevel && $0 != .music }.count
         let musicExtras = NotchLyricsSupport.isEnabled() || NotchQueueSupport.isEnabled()
         return geometry.expandedSize(module: module, detail: detail, panel: panel, detailHeight: detailHeight,
                                      shortcutCount: shortcuts,

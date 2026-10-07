@@ -892,7 +892,7 @@ enum NotchTests {
         for language in AppLanguage.allCases {
             let activities: [NotchCompactActivity] = [.timer, .downloads, .agents, .calendar, .music, .keepAwake]
             let font = NSFont.systemFont(ofSize: 12, weight: .medium)
-            // Home closes the row, so its label must fit as every activity's does.
+            // Home leads the row, so its label must fit as every activity's does.
             let width = (activities.map { $0.title(language) } + [NotchModule.home.title(language)]).map {
                 ($0 as NSString).size(withAttributes: [.font: font]).width
             }.max()!

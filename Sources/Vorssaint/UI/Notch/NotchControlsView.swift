@@ -17,14 +17,18 @@ struct NotchControlsView: View {
     /// each keep a second face, the agents and the calendar, a swipe away.
     var smartStacks = false
     @ObservedObject private var l10n = L10n.shared
+    /// Home's levels card gains a files face while the shelf holds something.
+    @ObservedObject private var shelf = ShelfService.shared
     @AppStorage(DefaultsKey.brightnessControlEnabled) private var brightnessEnabled = false
 
     var body: some View {
         let items = NotchSupport.controls()
         let levels = items.filter(\.isLevel)
-        let shortcuts = items.filter { !$0.isLevel && $0 != .music }
+        // Home gives the timer's place to the last tool opened from Tools.
+        let slots = smartStacks ? service.homeRail
+            : items.filter { !$0.isLevel && $0 != .music }.map(NotchHomeSupport.Slot.control)
         let layout = NotchLayout.controls(hasCards: items.contains(.music) || !levels.isEmpty,
-                                          shortcutCount: shortcuts.count, width: size.width, height: size.height)
+                                          shortcutCount: slots.count, width: size.width, height: size.height)
         if items.isEmpty {
             NotchEmptyView(symbol: "slider.horizontal.3", message: FeatureStrings.notch(l10n.language).empty)
         } else {
@@ -33,9 +37,16 @@ struct NotchControlsView: View {
                     cards(levels: levels, music: items.contains(.music), height: layout.cardRow)
                 }
                 if layout.shortcutRows > 0 {
-                    NotchRail(items: shortcuts, rows: layout.shortcutRows, itemWidth: NotchLayout.shortcutWidth,
-                              width: size.width, spacing: NotchLayout.shortcutSpacing, rowSpacing: NotchLayout.shortcutSpacing) { item in
-                        shortcut(item)
+                    NotchRail(items: slots, rows: layout.shortcutRows, itemWidth: NotchLayout.shortcutWidth,
+                              width: size.width, spacing: NotchLayout.shortcutSpacing, rowSpacing: NotchLayout.shortcutSpacing) { slot in
+                        switch slot {
+                        case .control(let item): shortcut(item)
+                        case .tool(let raw):
+                            if let tool = QuickLauncherItem(rawValue: raw) { NotchHomeToolTile(item: tool, service: service) }
+                        case .tools:
+                            NotchActionTile(symbol: NotchModule.tools.symbol,
+                                            title: NotchModule.tools.title(l10n.language)) { service.select(.tools) }
+                        }
                     }
                 }
             }
@@ -73,6 +84,8 @@ struct NotchControlsView: View {
                     NotchSmartStack(faces: rightFaces, height: height) { face in
                         if face == .calendar {
                             NotchHomeCalendarFace(service: service)
+                        } else if face == .files {
+                            NotchHomeFilesFace(service: service)
                         } else {
                             levelCard(levels, height: height)
                         }
@@ -113,7 +126,8 @@ struct NotchControlsView: View {
     private var rightFaces: [NotchHomeSupport.Face] {
         guard smartStacks else { return [.levels] }
         return NotchHomeSupport.rightFaces(calendar: service.modules.contains(.calendar),
-                                           eventSoon: NotchCalendarService.shared.countdown != nil)
+                                           eventSoon: NotchCalendarService.shared.countdown != nil,
+                                           files: service.modules.contains(.files) && !ShelfService.shared.items.isEmpty)
     }
 
     /// Three rows need the card's full height; a shortened card scrolls

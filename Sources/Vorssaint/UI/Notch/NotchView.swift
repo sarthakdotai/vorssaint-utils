@@ -338,10 +338,11 @@ struct NotchView: View {
         switch service.selected {
         case .home, .controls:
             let items = NotchSupport.controls()
-            let shortcuts = items.filter { $0 != .music && !$0.isLevel }
+            let shortcuts = service.selected == .home ? service.homeRail.count
+                : items.filter { $0 != .music && !$0.isLevel }.count
             size.height = max(size.height, NotchLayout.controls(
                 hasCards: items.contains(.music) || items.contains(where: \.isLevel),
-                shortcutCount: shortcuts.count, width: size.width, height: size.height).height)
+                shortcutCount: shortcuts, width: size.width, height: size.height).height)
         case .timer:
             let session = NotchTimerService.shared.session
             size.height = max(size.height, NotchLayout.timer(
@@ -1027,6 +1028,26 @@ struct NotchActivityPicker: View {
     private var individualChoices: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: NotchActivityPickerLayout.spacing),
                                  count: columns), spacing: NotchActivityPickerLayout.spacing) {
+            // Home leads the choices: every activity is one click away from it.
+            if let openHome {
+                let title = NotchModule.home.title(language)
+                Button(action: openHome) {
+                    HStack(spacing: 6) {
+                        Image(systemName: NotchModule.home.symbol)
+                        Text(title).lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                    .font(.system(size: 12, weight: .medium))
+                    .padding(.horizontal, 10)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: NotchActivityPickerLayout.rowHeight)
+                    .foregroundStyle(.white)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.12)))
+                    .contentShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(title)
+                .accessibilityIdentifier("notch.activity.home")
+            }
             ForEach(activities) { activity in
                 let chosen = activity == selected && combination == nil
                 Button { select(activity) } label: {
@@ -1054,25 +1075,6 @@ struct NotchActivityPicker: View {
                 .accessibilityLabel(activity.title(language))
                 .accessibilityAddTraits(chosen ? .isSelected : [])
                 .accessibilityIdentifier("notch.activity.\(activity.rawValue)")
-            }
-            if let openHome {
-                let title = NotchModule.home.title(language)
-                Button(action: openHome) {
-                    HStack(spacing: 6) {
-                        Image(systemName: NotchModule.home.symbol)
-                        Text(title).lineLimit(1).minimumScaleFactor(0.8)
-                    }
-                    .font(.system(size: 12, weight: .medium))
-                    .padding(.horizontal, 10)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: NotchActivityPickerLayout.rowHeight)
-                    .foregroundStyle(.white)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.12)))
-                    .contentShape(RoundedRectangle(cornerRadius: 8))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(title)
-                .accessibilityIdentifier("notch.activity.home")
             }
         }
     }
