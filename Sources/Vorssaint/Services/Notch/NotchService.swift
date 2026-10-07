@@ -479,7 +479,7 @@ final class NotchService: ObservableObject {
     }
 
     /// Home's row of shortcuts: Controls' own, with the timer's place given
-    /// to the last tool opened from Tools.
+    /// to what was last opened from Tools or Explore.
     var homeRail: [NotchHomeSupport.Slot] { NotchHomeSupport.rail(modules: modules) }
 
     /// The picker also opens Home, listed ahead of the activities.
@@ -1710,6 +1710,8 @@ final class NotchService: ObservableObject {
 
     func select(_ module: NotchModule) {
         guard let page = NotchHomeSupport.page(module, in: modules) else { return }
+        // A page chosen in Explore takes Home's recent place for a while.
+        if showingSections { NotchHomeSupport.rememberPage(page) }
         open(page)
     }
 

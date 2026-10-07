@@ -43,6 +43,8 @@ struct NotchControlsView: View {
                         case .control(let item): shortcut(item)
                         case .tool(let raw):
                             if let tool = QuickLauncherItem(rawValue: raw) { NotchHomeToolTile(item: tool, service: service) }
+                        case .page(let module):
+                            NotchActionTile(symbol: module.symbol, title: module.title(l10n.language)) { service.select(module) }
                         case .tools:
                             NotchActionTile(symbol: NotchModule.tools.symbol,
                                             title: NotchModule.tools.title(l10n.language)) { service.select(.tools) }

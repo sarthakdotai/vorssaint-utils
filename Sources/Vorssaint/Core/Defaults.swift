@@ -799,9 +799,10 @@ enum DefaultsKey {
     static let notchHapticFeedback = "notchHapticFeedback"
     static let notchTranslucentBackground = "notchTranslucentBackground"
     static let notchSystemReadout = "notchSystemReadout"
-    // Tools opened from the Tools page, most recent first, for Home's row.
-    // Usage history, not a preference: unregistered, so it stays out of backups.
-    static let notchRecentTools = "notchRecentTools"
+    // What was last opened from Tools or Explore, and when, for Home's row.
+    // Usage, not a preference: unregistered, so it stays out of backups.
+    static let notchRecentLaunch = "notchRecentLaunch"
+    static let notchRecentLaunchDate = "notchRecentLaunchDate"
     static let notchShelf = "notchShelf"
     static let notchDragReveal = "notchDragReveal"
     static let notchCaptureControls = "notchCaptureControls"

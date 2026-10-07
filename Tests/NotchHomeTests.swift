@@ -31,32 +31,55 @@ enum NotchHomeTests {
         suite.expect(home.rightFaces(calendar: false, eventSoon: false, files: true) == [.files, .levels],
                      "files get their face without the calendar page")
 
-        var history: [String] = []
-        for tool in ["colorPicker", "windowLayout", "colorPicker"] { history = home.remember(tool, in: history) }
-        suite.expect(history == ["colorPicker", "windowLayout"], "the last tool opened leads, each tool once")
-        for index in 0..<10 { history = home.remember("tool\(index)", in: history) }
-        suite.expect(history.count == home.recentToolLimit && history.first == "tool9",
-                     "the history keeps only the most recent tools")
+        typealias Launch = NotchHomeSupport.Launch
+        for launch in [Launch.tool("colorPicker"), .page(.clipboard)] {
+            suite.expect(Launch(stored: launch.stored) == launch, "a launch survives being stored")
+        }
+        suite.expect(Launch(stored: "page:nowhere") == nil && Launch(stored: "colorPicker") == nil,
+                     "a stored launch that no longer names anything is ignored")
 
         let controls: [NotchControlItem] = [.volume, .music, .mixer, .keepAwake, .timer, .calendar]
-        suite.expect(home.recentTool(["keepAwake", "colorPicker"], shortcuts: controls, available: { _ in true }) == "colorPicker",
-                     "a tool the row already shows as a shortcut is skipped")
-        suite.expect(home.recentTool(["colorPicker", "media"], shortcuts: controls, available: { $0 != "colorPicker" }) == "media",
-                     "a tool no longer available is skipped")
-        suite.expect(home.recentTool([], shortcuts: controls, available: { _ in true }) == nil, "no history, no recent tool")
+        let opened = Date(timeIntervalSinceReferenceDate: 1_000_000)
+        func recent(_ launch: Launch?, after seconds: TimeInterval, available: Bool = true) -> NotchHomeSupport.Slot? {
+            home.recentSlot(launch, at: opened, now: opened.addingTimeInterval(seconds), shortcuts: controls,
+                            available: { _ in available })
+        }
+        suite.expect(recent(.tool("colorPicker"), after: 5) == .tool("colorPicker"),
+                     "a tool just opened from Tools takes the place")
+        suite.expect(recent(.page(.clipboard), after: 5) == .page(.clipboard),
+                     "a page just opened from Explore takes the place")
+        suite.expect(recent(.tool("colorPicker"), after: home.launchLifetime - 1) == .tool("colorPicker")
+                     && recent(.tool("colorPicker"), after: home.launchLifetime) == nil,
+                     "after three minutes the place returns to Tools")
+        suite.expect(recent(.tool("colorPicker"), after: -60) == nil, "a launch dated in the future is ignored")
+        suite.expect(recent(.tool("keepAwake"), after: 5) == nil && recent(.page(.mixer), after: 5) == nil
+                     && recent(.page(.calendar), after: 5) == nil,
+                     "a tool or page the row already reaches does not take the place")
+        suite.expect(recent(.page(.home), after: 5) == nil && recent(.page(.tools), after: 5) == nil
+                     && recent(.page(.controls), after: 5) == nil,
+                     "Home, Controls and Tools never take the place")
+        suite.expect(recent(.page(.timer), after: 5) == .page(.timer),
+                     "the timer's page may take the place, the timer being off Home's row")
+        suite.expect(recent(.tool("colorPicker"), after: 5, available: false) == nil,
+                     "a launch no longer available is ignored")
+        suite.expect(home.recentSlot(nil, at: nil, now: opened, shortcuts: controls, available: { _ in true }) == nil,
+                     "nothing opened, nothing recent")
 
-        suite.expect(home.rail(controls: controls, recentTool: "colorPicker", toolsPage: true)
+        suite.expect(home.rail(controls: controls, recent: .tool("colorPicker"), toolsPage: true)
                         == [.control(.mixer), .control(.keepAwake), .tool("colorPicker"), .control(.calendar)],
-                     "the last tool opened takes the timer's place on Home's row")
-        suite.expect(home.rail(controls: controls, recentTool: nil, toolsPage: true)
+                     "the last launch takes the timer's place on Home's row")
+        suite.expect(home.rail(controls: controls, recent: .page(.clipboard), toolsPage: true)
+                        == [.control(.mixer), .control(.keepAwake), .page(.clipboard), .control(.calendar)],
+                     "a page from Explore takes the same place")
+        suite.expect(home.rail(controls: controls, recent: nil, toolsPage: true)
                         == [.control(.mixer), .control(.keepAwake), .tools, .control(.calendar)],
-                     "before any tool is opened, the Tools page takes that place")
-        suite.expect(home.rail(controls: [.mixer, .calendar], recentTool: "colorPicker", toolsPage: true)
+                     "with nothing recent, Tools holds the place")
+        suite.expect(home.rail(controls: [.mixer, .calendar], recent: .tool("colorPicker"), toolsPage: true)
                         == [.control(.mixer), .control(.calendar), .tool("colorPicker")],
-                     "without the timer the recent tool joins the end of the row")
-        suite.expect(home.rail(controls: controls, recentTool: "colorPicker", toolsPage: false)
+                     "without the timer the place joins the end of the row")
+        suite.expect(home.rail(controls: controls, recent: nil, toolsPage: false)
                         == [.control(.mixer), .control(.keepAwake), .control(.calendar)],
-                     "without the Tools page there is no tool slot, and the timer stays off Home")
+                     "without the Tools page and nothing recent there is no place, and the timer stays off Home")
 
         suite.expect(home.page(.music, in: [.home, .music]) == .music, "a visible page opens as itself")
         suite.expect(home.page(.controls, in: [.home, .music]) == .home,
